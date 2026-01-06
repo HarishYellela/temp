@@ -1,0 +1,96 @@
+ //Grid Column Textbox convert to Number only textbox
+  class GridDecimalValidator {
+    constructor(selector, maxDigits = 10, step = 1) {
+      this.selector = selector;
+      this.maxDigits = maxDigits;
+      this.step = step;
+      this.observeDOM();
+      this.applyValidation();
+    }
+
+    applyValidation() {
+      const inputs = document.querySelectorAll(this.selector);
+      inputs.forEach(input => {
+        if (!input.dataset.bound) {
+          // ✅ Convert to number input
+          input.setAttribute('type', 'number');
+          input.setAttribute('step', 'any');
+          input.setAttribute('min', '0');
+
+          // ✅ Add event listeners
+          input.addEventListener('keypress', this.handleKeyPress.bind(this));
+          input.addEventListener('input', this.handleInput.bind(this));
+          input.addEventListener('keydown', this.handleArrowKeys.bind(this));
+
+          input.dataset.bound = "true"; // Prevent duplicate bindings
+        }
+      });
+    }
+
+    handleKeyPress(event) {
+      const char = String.fromCharCode(event.which);
+      const isNumber = /[0-9]/.test(char);
+      const isDecimal = char === '.';
+      const inputValue = event.target.value;
+
+      if (isDecimal && inputValue.includes('.')) {
+        event.preventDefault();
+      }
+
+      if (!isNumber && !isDecimal) {
+        event.preventDefault();
+      }
+    }
+
+    handleInput(event) {
+      const value = event.target.value;
+      const digitsOnly = value.replace('.', '');
+
+      if (digitsOnly.length > this.maxDigits) {
+        const allowedLength = this.maxDigits + (value.includes('.') ? 1 : 0);
+        event.target.value = value.slice(0, allowedLength);
+      }
+    }
+
+    handleArrowKeys(event) {
+      const input = event.target;
+      let value = parseFloat(input.value) || 0;
+
+      if (event.key === 'ArrowUp') {
+        value += this.step;
+        event.preventDefault();
+      } else if (event.key === 'ArrowDown') {
+        value = Math.max(0, value - this.step);
+        event.preventDefault();
+      } else {
+        return;
+      }
+
+      const digitsOnly = value.toString().replace('.', '');
+      if (digitsOnly.length <= this.maxDigits) {
+        input.value = value.toFixed(this.getDecimalPlaces(input.value));
+        input.dispatchEvent(new Event('input'));
+      }
+    }
+
+    getDecimalPlaces(value) {
+      const parts = value.split('.');
+      return parts.length > 1 ? parts[1].length : 0;
+    }
+
+    observeDOM() {
+      const observer = new MutationObserver(() => this.applyValidation());
+      const gridContainer = document.querySelector('.vpBody');
+      if (gridContainer) {
+        observer.observe(gridContainer, {
+          childList: true,
+          subtree: true
+        });
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    new GridDecimalValidator('input.edit[data-field="textboxm"]', 10, 1);
+  });
+

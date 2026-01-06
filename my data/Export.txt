@@ -1,0 +1,75 @@
+    
+	$.fn.dgExport = function (format, what) {
+        var grid = this;
+        if (!format || !what) {
+            $.dg.exportDialog(format || "pdf", what || "page", grid.dg().valueBag.find("> input[name^='select~'][value='1']").length)
+                .then(function (res) { grid.dgExport(res.format, res.content); });
+            return;
+        }
+
+        if (format != 'excel' && format != 'pdf') {
+            $.dg.error($.dg.literal('ExportFormatNotSupported', format))
+            return;
+        }
+
+        var params = {
+            external: true,
+            action: format,
+            content: what,
+            sort: this.dgGetSortString(),
+            order: grid.dg().valueBag.find("[name='columns~" + this.dg().id + "']").val()
+        };
+        if (what == "page") {
+            params.top = this.dgSettings("Config").Top
+            params.index = this.dgSettings("Runtime").Index;
+        } else if (what == "selection") {
+            var keys = [];
+            if (!grid.dgSettings("Config").KeepSelection) {
+                $(this).dgSelected().each(function () {
+                    keys.push($(this).attr("data-key"));
+                });
+                params.keys = keys;
+            } else {
+                var keys = [];
+                grid.dg().valueBag.find("> input[name^='select~'][value='1']").each(function () {
+                    var parts = $(this).attr("name").split("~");
+                    if (parts.length > 2) {
+                        keys.push(parts[2]);
+                    }
+                });
+                params.keys = keys;
+            }
+        }
+        this.dgGetFilterString(params);
+        grid.dgDisable();
+        $.removeCookie('ExportFinished', { path: '/' });
+        var timeout = 50;
+        var endWaiting = false;
+        setTimeout(function checkExport() {
+            if (document.cookie.indexOf('ExportFinished') > -1 || endWaiting) {
+                $.removeCookie('ExportFinished', { path: '/' });
+                grid.dgEnable();
+                grid.removeClass("Loading");
+            } else {
+                setTimeout(checkExport, timeout = Math.min(1000, timeout * 2));
+            }
+        }, timeout);
+
+        var frame = this.dgPost(params, null, null, false);
+        frame.on('load', function () {
+            var fr = frame[0];
+            if (fr && fr.contentDocument) {
+                var textContent = fr.contentDocument.body.textContent;
+                if (textContent && textContent.indexOf("failed~") == 0)  {
+                    endWaiting = true;
+                    $.dg.error(textContent.substring("failed~".length));
+                    return;
+                }
+                if(fr.contentDocument.contentType === "text/html" && fr.contentDocument.URL !== "about:blank"){
+					endWaiting = true;
+					$.dg.error($.dg.literal("CannotExportGridData"));
+					return;
+                }
+            }
+        });
+    };

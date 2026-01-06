@@ -1,0 +1,260 @@
+
+<html>
+<body>
+
+<!-- Dimmed Background Overlay -->
+<div class="exportOverlay" style="display: none;"></div>
+
+<!-- Export Format Popup -->
+<div class="exportFormatModal" style="display: none;">
+    <div class="exportModalContent">
+        <!-- Header -->
+        <div class="exportModalHeader">
+            <h3 Style="font-family:Arial,Helvetica,sans-serif;">Export Settings - Pro</h3>
+           <img src="Images/BDX/icons8-close-16.png" alt="Close" class="closeExportModal" title="Close" />
+	   </div>
+        <!-- Body with Table Layout -->
+        <div class="exportModalBody">
+            <table style="width: 100%;">
+                <tbody>
+                    <tr>
+                        <td><label class="sectionTitle" style="font-family:Arial,Helvetica,sans-serif">Format:</label></td>
+                        <td>
+                            <div style="margin-left: -63px;">
+                                <input type="radio" class="ds formatOption" name="formatOpt" id="dynGrid_option_1" value="pdf" checked>
+                                <label for="dynGrid_option_1" style="font-family:Arial,Helvetica,sans-serif">PDF</label>
+                            </div>
+                            <div style="margin-left: -63px;">
+                                <input type="radio" class="ds formatOption" name="formatOpt" id="dynGrid_option_2" value="xlsx">
+                                <label for="dynGrid_option_2" style="font-family:Arial,Helvetica,sans-serif">XLSX</label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><label class="sectionTitle" style="font-family:Arial,Helvetica,sans-serif">Content:</label></td>
+                        <td>
+                            <div style="margin-left: -63px;">
+                                <input type="radio" class="ds formatOption" name="contentOpt" id="dynGrid_option_3" value="all">
+                                <label for="dynGrid_option_3" style="font-family:Arial,Helvetica,sans-serif">All records</label>
+                            </div>
+                            <div style="margin-left: -63px;">
+                                <input type="radio" class="ds formatOption" name="contentOpt" id="dynGrid_option_4" value="current" checked>
+                                <label for="dynGrid_option_4" style="font-family:Arial,Helvetica,sans-serif">Current page</label>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="exportModalFooter">
+            <button class="confirmExport" onclick="performExport()">Export</button>
+        </div>
+
+    </div>
+</div>
+<div data-flx-bc="Grid"/>
+<div data-flx-subop="Call_PortalGenerateGridButtonList"/>
+
+</body>
+</html>
+
+<script>
+   
+function bindExportButton() {
+    const exportButton = document.querySelector('.ToolButton.apr-button.Export');
+    if (exportButton && !exportButton.dataset.bound) {
+	
+	//console.log( $(".DynamicGrid").dgExport("pdf", "all"));
+	
+	
+        exportButton.dataset.bound = "true"; // Prevent rebinding
+        exportButton.onclick = function () {
+            document.querySelector('.DynamicGrid').style.pointerEvents = 'none';
+            document.querySelector('.exportOverlay').style.display = 'block';
+            document.querySelector('.exportFormatModal').style.display = 'flex';
+        };
+        console.log("Export button bound");
+    }
+}
+
+function observeGridChanges() {
+    const gridContainer = document.querySelector('.DynamicGrid');
+    if (!gridContainer) return;
+
+    const observer = new MutationObserver((mutationsList) => {
+        for (const mutation of mutationsList) {
+            if (mutation.type === 'childList' || mutation.type === 'subtree') {
+                bindExportButton(); // Try binding whenever grid changes
+            }
+        }
+    });
+
+    observer.observe(gridContainer, {
+        childList: true,
+        subtree: true
+    });
+
+    console.log("Started observing grid changes");
+}
+
+
+document.querySelector('.closeExportModal').onclick = () => {
+    document.querySelector('.exportFormatModal').style.display = 'none';
+    document.querySelector('.DynamicGrid').style.pointerEvents = '';
+	document.querySelector('.exportOverlay').style.display = 'none';
+};
+
+
+document.querySelector('.confirmExport').onclick = () => {
+    document.querySelector('.exportFormatModal').style.display = 'none';
+	 document.querySelector('.DynamicGrid').style.pointerEvents = '';
+	 document.querySelector('.exportOverlay').style.display = 'none';
+    performExport();
+};
+	
+	
+    function performExport() {
+        const headers = [];
+        const data = [];
+	    const exportFormat = document.querySelector('.formatOption:checked').value;
+        const firstRow = $("div.vpHead.Top table thead tr.HeadT td:visible").each(function () {
+					    const title = $(this).find("div").attr("title");
+					    headers.push(title || "Column");
+					});
+
+                $("div.Container.vpBody table tbody tr:not(.Dummy)").each(function () {
+                    const row = [];
+                    $(this).find("td:visible").each(function () {
+                        const cellText = $(this).find(".display").text().trim();
+                        row.push(cellText);
+                    });
+                    if (row.length > 0) data.push(row);
+                });
+
+                if (exportFormat === "pdf") {
+						    const { jsPDF } = window.jspdf;
+
+						    // Estimate page width based on number of columns
+						    const columnCount = headers.length;
+						    const columnWidth = 30; // Approximate width per column in points
+						    const pageWidth = Math.max(210, columnCount * columnWidth); // Minimum A4 width is 210mm
+						    // Convert mm to points (1 mm ≈ 2.83465 points)
+						    const pageWidthPoints = pageWidth * 2.83465;
+						    const pageHeightPoints = 297 * 2.83465; // A4 height in points
+
+						    const doc = new jsPDF({
+						        orientation: "landscape",
+						        unit: "pt",
+						        format: [pageWidthPoints, pageHeightPoints]
+						    });
+
+						    doc.autoTable({
+						        head: [headers],
+						        body: data,
+						        styles: {
+						            fontSize: 8,
+						            cellPadding: 4
+						        },
+						        headStyles: {
+						            fillColor: [22, 160, 133],
+						            textColor: 255,
+						            fontStyle: 'bold'
+						        },
+						        theme: 'grid',
+						        margin: { top: 20 }
+						    });
+
+                    function generatePDFExportFilename(prefix) {
+                        var now = new Date();
+                        var dateStr = now.toISOString().slice(0, 10);
+                        var timeStr = now.toTimeString().slice(0, 8).replace(/:/g, "-");
+                        return prefix + "_" + dateStr + "_" + timeStr + ".pdf";
+                    }
+
+                    var filename = generatePDFExportFilename("Export");
+                    doc.save(filename);
+
+                }  if (exportFormat === "xlsx") {
+					    const workbook = new ExcelJS.Workbook();
+					    const worksheet = workbook.addWorksheet("Sheet1");
+
+					    // Add header row
+					    worksheet.addRow(headers);
+
+					    // Add data rows
+					    data.forEach(row => {
+					        worksheet.addRow(row);
+					    });
+
+					    // Style header row
+					    const headerRow = worksheet.getRow(1);
+					    headerRow.eachCell((cell) => {
+					        cell.font = { bold: true };
+					        cell.alignment = { horizontal: "center", vertical: "middle" };
+					        cell.fill = {
+					            type: "pattern",
+					            pattern: "solid",
+					            fgColor: { argb: "FFDCE6F1" } // Light blue
+					        };
+					        cell.border = {
+					            top: { style: "thin" },
+					            left: { style: "thin" },
+					            bottom: { style: "thin" },
+					            right: { style: "thin" }
+					        };
+					    });
+
+					    // Auto-adjust column widths
+					    worksheet.columns.forEach((column, i) => {
+					        let maxLength = headers[i].length;
+					        data.forEach(row => {
+					            const cellValue = row[i];
+					            if (cellValue && cellValue.length > maxLength) {
+					                maxLength = cellValue.length;
+					            }
+					        });
+					        column.width = maxLength + 2;
+					    });
+
+					    // Generate filename
+					    function generateExcelExportFilename(prefix) {
+					        var now = new Date();
+					        var dateStr = now.toISOString().slice(0, 10);
+					        var timeStr = now.toTimeString().slice(0, 8).replace(/:/g, "-");
+					        return prefix + "_" + dateStr + "_" + timeStr + ".xlsx";
+					    }
+
+					    var excelFilename = generateExcelExportFilename("Export");
+
+					    // Trigger download
+					    workbook.xlsx.writeBuffer().then((buffer) => {
+					        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+					        const link = document.createElement("a");
+					        link.href = URL.createObjectURL(blob);
+					        link.download = excelFilename;
+					        link.click();
+					        URL.revokeObjectURL(link.href);
+					    });
+					}
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        bindExportButton();
+		observeGridChanges();
+
+
+        document.querySelector('.ProfileSelector')?.addEventListener('change', function () {
+            setTimeout(() => {
+                bindExportButton();
+				console.log('test');
+            }, 500);
+        });
+    });
+
+</script>
+
+
+
+<div data-flx-subop="Call_PortalGenerateForm"/>
