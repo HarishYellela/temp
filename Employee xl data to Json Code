@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Excel → JSON (EmployeeNO & Roles) — Responsive + Folding + Sample XLSX</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- SheetJS (XLSX) CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Ace Editor (folding + JSON mode) -->
+  <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.36.3/src-min-noconflict/ace.js"></script>
+  <script>
+    ace.config.set("basePath", "https://cdn.jsdelivr.net/npm/ace-builds@1.36.3/src-min-noconflict");
+  </script>
+
+  <style>
+    /* ---------- THEME ---------- */
+    :root {
+      --txt: #111;
+      --muted: #5f6a74;
+      --ok: #0b6a0b;
+      --err: #b00020;
+      --border: #e0e0e0;
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --accent: #0078d4; /* Windows 11 blue */
+      --accent-strong: #106ebe;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.05);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Segoe UI Mono", monospace;
+      --font: "Segoe UI", SegoeUI, Roboto, Helvetica, Arial, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --txt: #e9eef2;
+        --muted: #a1acb6;
+        --ok: #5bd75b;
+        --err: #ff6b7a;
+        --border: #2e3842;
+        --bg: #0f141a;
+        --card: #161b22;
+        --accent: #2994ff;
+        --accent-strong: #1580ef;
+        --shadow: none;
+      }
+    }
+
+    /* ---------- GLOBAL ---------- */
+    html, body { height: 100%; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--txt);
+      font-family: var(--font);
+      line-height: 1.45;
+      font-size: clamp(14px, 1.1vw, 16px);
+      display: grid;
+      place-items: start center;
+    }
+
+    /* ---------- PAGE WRAP ---------- */
+    .page {
+      width: min(1200px, 100%);
+      padding: clamp(12px, 3vw, 24px);
+    }
+    .page h1 {
+      margin: 0 0 10px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      text-wrap: balance;
+      font-size: clamp(18px, 2.1vw, 24px);
+      text-align: center;
+    }
+    .page .subtitle {
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 14px;
+      font-size: clamp(12px, 1.5vw, 14px);
+    }
+
+    /* ---------- LAYOUT CARD ---------- */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: clip;
+    }
+    .split {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+      min-height: min(80vh, 980px);
+    }
+    @media (min-width: 900px) {
+      .split {
+        grid-template-columns: 420px 1fr;
+      }
+    }
+
+    /* ---------- LEFT: CONTROL PANEL ---------- */
+    .panel {
+      display: grid;
+      grid-template-rows: auto auto auto 1fr auto;
+      padding: clamp(12px, 2.4vw, 20px);
+      gap: 12px;
+      border-right: 1px solid var(--border);
+      min-width: 0;
+    }
+    @media (max-width: 899.98px) {
+      .panel {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+    }
+
+    .section-title {
+      font-weight: 600;
+      margin: 4px 0 8px;
+      font-size: clamp(14px, 1.6vw, 16px);
+    }
+
+    /* Upload zone */
+    .dropzone {
+      display: grid;
+      gap: 8px;
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      background: color-mix(in srgb, var(--card) 94%, var(--bg) 6%);
+      transition: 0.2s border-color, 0.2s background, 0.2s color;
+    }
+    .dropzone.dragover {
+      border-color: var(--accent);
+      background: color-mix(in srgb, var(--card) 80%, var(--accent) 20%);
+      color: #fff;
+    }
+    .file-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+    input[type="file"] { max-width: 100%; }
+    .filename {
+      color: var(--muted);
+      font-size: 0.95em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 120px;
+    }
+
+    /* Radio group */
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 18px;
+      color: var(--muted);
+    }
+    .options label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .options input[type="radio"] { accent-color: var(--accent); }
+
+    /* Sticky action bar */
+    .actions {
+      position: sticky;
+      bottom: 0;
+      background: var(--card);
+      border-top: 1px solid var(--border);
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      z-index: 2;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 9px 14px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.18s transform, 0.18s opacity, 0.18s background, 0.18s border-color;
+      font-size: 0.95rem;
+    }
+    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .btn.primary { background: var(--accent); color: #fff; }
+    .btn.primary:hover:not(:disabled) { background: var(--accent-strong); }
+    .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--txt); }
+    .btn.ghost:hover:not(:disabled) { border-color: var(--accent); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    /* Status + help */
+    .status {
+      color: var(--muted);
+      white-space: pre-wrap;
+      margin: 0;
+      min-height: 1.4em;
+      font-size: 0.95rem;
+    }
+    .status.ok { color: var(--ok); }
+    .status.error { color: var(--err); }
+    .help {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    code {
+      background: color-mix(in srgb, var(--bg) 50%, var(--card) 50%);
+      padding: 1px 4px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .sep { height: 1px; background: var(--border); margin: 8px 0; width: 100%; }
+
+    /* ---------- RIGHT: JSON PREVIEW ---------- */
+    .preview {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-width: 0;
+    }
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: clamp(10px, 2vw, 14px);
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 94%, var(--bg) 6%);
+    }
+    .preview-title {
+      font-weight: 600;
+      font-size: clamp(14px, 1.6vw, 16px);
+    }
+    .preview-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Ace editor container */
+    .json-editor {
+      width: 100%;
+      min-height: 300px;
+      height: 100%;
+      border-left: 1px solid var(--border);
+    }
+    @media (max-width: 899.98px) {
+      .json-editor { border-left: none; }
+    }
+
+    .no-shrink { flex-shrink: 0; }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <h1>Excel → JSON: EmployeeNO &amp; Roles</h1>
+      <section class="card split excel-json-widget" aria-label="Excel to JSON widget">
+      <!-- LEFT: Controls -->
+      <aside class="panel">
+        <div>
+          <div class="section-title">Upload</div>
+          <div class="dropzone" aria-label="Drag and drop Excel file here" tabindex="0">
+            <div class="file-row">
+              <input class="file-input no-shrink" type="file" accept=".xlsx,.xls" aria-label="Choose Excel file" />
+              <span class="filename" title="No file selected">No file selected</span>
+            </div>
+            <div class="help">Drop a file here or use the picker. Supported: <code>.xlsx</code>, <code>.xls</code></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title">Output Mode</div>
+          <div class="options">
+            <label><input type="radio" name="outmode" class="outmode-array" checked /> Array (Employee + Roles[])</label>
+            <label><input type="radio" name="outmode" class="outmode-explode" /> Explode (one row per role)</label>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title">Expected Headers</div>
+          <div class="help">
+            Employee: <code>EmployeeNO</code>, <code>Employee No</code>, <code>EmpNo</code><br/>
+            Roles: <code>Role</code>, <code>Roles</code><br/>
+            Multiple roles split on comma <code>,</code>, semicolon <code>;</code>, pipe <code>|</code>, or newline.
+          </div>
+        </div>
+
+        <div>
+          <div class="sep"></div>
+          <pre class="status" role="status" aria-live="polite"></pre>
+        </div>
+
+        <div class="actions">
+          <button class="btn ghost sample-xlsx-btn">Download Sample Excel</button>
+          <button class="btn ghost parse-btn" disabled>Parse to JSON</button>
+          <button class="btn ghost download-btn" disabled>Download JSON</button>
+          <button class="btn primary copy-btn" disabled>Copy JSON</button>
+        </div>
+      </aside>
+
+      <!-- RIGHT: JSON Preview -->
+      <section class="preview" aria-label="JSON Preview">
+        <div class="preview-header">
+          <div class="preview-title">Output JSON</div>
+          <div class="preview-actions">
+            <button class="btn ghost fold-all-btn" disabled>Fold All</button>
+            <button class="btn ghost unfold-all-btn" disabled>Unfold All</button>
+            <button class="btn ghost collapse-btn" aria-expanded="true">Collapse Preview</button>
+          </div>
+        </div>
+        <div class="json-editor" aria-label="JSON output"></div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    // Initialize the widget by passing a root element (supports multiple instances)
+    function initExcelJsonWidget(root) {
+      const fileInput       = root.querySelector('.file-input');
+      const filenameEl      = root.querySelector('.filename');
+      const parseBtn        = root.querySelector('.parse-btn');
+      const downloadBtn     = root.querySelector('.download-btn');
+      const copyBtn         = root.querySelector('.copy-btn');
+      const statusEl        = root.querySelector('.status');
+      const outArrayRadio   = root.querySelector('.outmode-array');
+      const outExplodeRadio = root.querySelector('.outmode-explode');
+      const dropzone        = root.querySelector('.dropzone');
+      const collapseBtn     = root.querySelector('.collapse-btn');
+      const foldAllBtn      = root.querySelector('.fold-all-btn');
+      const unfoldAllBtn    = root.querySelector('.unfold-all-btn');
+      const sampleBtn       = root.querySelector('.sample-xlsx-btn');
+      const editorEl        = root.querySelector('.json-editor');
+
+      // ----- Ace Editor Setup -----
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const editor = ace.edit(editorEl);
+      editor.setTheme(prefersDark ? 'ace/theme/twilight' : 'ace/theme/textmate');
+      editor.session.setMode('ace/mode/json');
+      editor.setReadOnly(true);
+      editor.setOptions({
+        showFoldWidgets: true,
+        highlightActiveLine: false,
+        showPrintMargin: false,
+        wrap: true,
+        fontSize: '12.5px',
+        fontFamily: 'Consolas, "Segoe UI Mono", ui-monospace, Menlo, monospace'
+      });
+      try {
+        // Sync editor theme with OS theme change
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+          editor.setTheme(e.matches ? 'ace/theme/twilight' : 'ace/theme/textmate');
+        });
+      } catch {}
+
+      let currentJson = [];
+
+      // ===== Config =====
+      const ROLE_DELIMS_REGEX = /[,;|\n\r]+/; // split on comma, semicolon, pipe, and newlines
+      const NORMALIZE_CASE = false;           // true -> TitleCase roles; false preserves "BDX_ASIG"
+      const SKIP_ROWS_WITH_NO_ROLES = true;   // drop rows that end with no roles
+      // Header aliases
+      const EMP_ALIASES   = ['employeeno', 'employee no', 'empno', 'employee_no', 'employee number'];
+      const ROLES_ALIASES = ['roles', 'role'];
+
+      // ----- Helpers -----
+      function setStatus(message, variant) {
+        statusEl.textContent = message || '';
+        statusEl.className = `status ${variant === 'error' ? 'error' : (variant === 'ok' ? 'ok' : '')}`;
+      }
+      function setFileName(name) {
+        filenameEl.textContent = name || 'No file selected';
+        filenameEl.title = filenameEl.textContent;
+      }
+      function resetOutput() {
+        editor.setValue('', -1);
+        currentJson = [];
+        downloadBtn.disabled = true;
+        copyBtn.disabled = true;
+        foldAllBtn.disabled = true;
+        unfoldAllBtn.disabled = true;
+      }
+      function enableParse(enable) {
+        parseBtn.disabled = !enable;
+      }
+      function togglePreview() {
+        const expanded = collapseBtn.getAttribute('aria-expanded') === 'true';
+        editorEl.style.display = expanded ? 'none' : 'block';
+        collapseBtn.textContent = expanded ? 'Expand Preview' : 'Collapse Preview';
+        collapseBtn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+        if (!expanded) setTimeout(() => editor.resize(), 0);
+      }
+      collapseBtn.addEventListener('click', togglePreview);
+
+      // ----- Drag & Drop -----
+      ;['dragenter','dragover'].forEach(evt => {
+        dropzone.addEventListener(evt, (e) => {
+          e.preventDefault(); e.stopPropagation();
+          dropzone.classList.add('dragover');
+        });
+      });
+      ;['dragleave','drop'].forEach(evt => {
+        dropzone.addEventListener(evt, (e) => {
+          e.preventDefault(); e.stopPropagation();
+          dropzone.classList.remove('dragover');
+        });
+      });
+      dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        if (dt && dt.files && dt.files[0]) {
+          fileInput.files = dt.files;
+          setFileName(dt.files[0].name);
+          setStatus('');
+          resetOutput();
+          enableParse(true);
+        }
+      });
+      dropzone.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          fileInput.click();
+          e.preventDefault();
+        }
+      });
+
+      // ----- File picker -----
+      fileInput.addEventListener('change', () => {
+        const name = fileInput.files?.[0]?.name || '';
+        setFileName(name);
+        setStatus('');
+        resetOutput();
+        enableParse(!!name);
+      });
+
+      // ----- Parse -----
+      parseBtn.addEventListener('click', async () => {
+        try {
+          if (!fileInput.files || !fileInput.files[0]) {
+            setStatus('Please choose an Excel file first.', 'error');
+            return;
+          }
+
+          setStatus('Reading file...');
+          const file = fileInput.files[0];
+          const data = await file.arrayBuffer();
+
+          // Read the workbook
+          const workbook = XLSX.read(data, { type: 'array' });
+
+          if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+            setStatus('No sheets found in the workbook.', 'error');
+            return;
+          }
+
+          // Read first sheet
+          const firstSheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheetName];
+
+          // Convert to row objects (keys from headers)
+          const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
+          if (rows.length === 0) {
+            setStatus('The first sheet appears to be empty.', 'error');
+            return;
+          }
+
+          // Extract header row for alias mapping
+          const headerRow = getHeaderRow(sheet);
+          if (!headerRow) {
+            setStatus('Could not detect a header row.', 'error');
+            return;
+          }
+          const headerMap = buildHeaderMap(headerRow); // lower -> original
+
+          // Resolve keys using aliases
+          const empKey   = resolveAlias(headerMap, EMP_ALIASES);
+          const rolesKey = resolveAlias(headerMap, ROLES_ALIASES);
+
+          if (!empKey || !rolesKey) {
+            const found = Object.keys(headerMap).join(', ') || 'none';
+            setStatus(
+              `Required columns not found. Needed any of [${EMP_ALIASES.join(', ')}] and any of ` +
+              `[${ROLES_ALIASES.join(', ')}]. Found headers: ${found}`,
+              'error'
+            );
+            return;
+          }
+
+          // Build normalized array (EmployeeNO + Roles[])
+          const normalized = rows.map(r => {
+            const emp = String(r[empKey] ?? '').trim();
+            const rolesRaw = String(r[rolesKey] ?? '');
+            const rolesArr = parseRoles(rolesRaw);
+            return { EmployeeNO: emp, Roles: rolesArr };
+          }).filter(item => {
+            const hasEmp = item.EmployeeNO.length > 0;
+            const hasRoles = item.Roles.length > 0;
+            return hasEmp && (SKIP_ROWS_WITH_NO_ROLES ? hasRoles : true);
+          });
+
+          if (normalized.length === 0) {
+            setStatus('No valid data rows found after parsing.', 'error');
+            return;
+          }
+
+          // Output mode: array vs explode
+          let result;
+          if (outExplodeRadio.checked) {
+            result = [];
+            for (const rec of normalized) {
+              for (const role of rec.Roles) {
+                result.push({ EmployeeNO: rec.EmployeeNO, Role: role });
+              }
+            }
+          } else {
+            result = normalized;
+          }
+
+          currentJson = result;
+          editor.setValue(JSON.stringify(result, null, 2), -1);
+
+          const countExploded = outExplodeRadio.checked ? ` Exploded to ${result.length} employee-role row(s).` : '';
+          setStatus(`Parsed ${normalized.length} employee row(s) from "${firstSheetName}".` + countExploded, 'ok');
+          downloadBtn.disabled = false;
+          copyBtn.disabled = false;
+          foldAllBtn.disabled = false;
+          unfoldAllBtn.disabled = false;
+
+          // Optional host integration:
+          // $Context.outputs.Json = editor.getValue();
+          // $Context.submit?.();
+
+        } catch (err) {
+          console.error(err);
+          setStatus('An error occurred while parsing the file. See console for details.', 'error');
+        }
+      });
+
+      // ----- Download JSON -----
+      downloadBtn.addEventListener('click', () => {
+        if (!currentJson.length) return;
+        const pretty = JSON.stringify(currentJson, null, 2);
+        const blob = new Blob([pretty], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const baseName = (fileInput.files?.[0]?.name || 'employees').replace(/\.(xlsx|xls)$/i, '');
+        a.href = url;
+        a.download = `${baseName}_employeeno_roles.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      });
+
+      // ----- Copy JSON -----
+      copyBtn.addEventListener('click', async () => {
+        const text = editor.getValue() || '';
+        try {
+          await navigator.clipboard.writeText(text);
+          setStatus('JSON copied to clipboard!', 'ok');
+        } catch {
+          const tmp = document.createElement('textarea');
+          tmp.value = text;
+          document.body.appendChild(tmp);
+          tmp.select();
+          const ok = document.execCommand('copy');
+          tmp.remove();
+          setStatus(ok ? 'JSON copied to clipboard!' : 'Failed to copy JSON.', ok ? 'ok' : 'error');
+        }
+      });
+
+      // ----- Fold All / Unfold All -----
+      foldAllBtn.addEventListener('click', () => {
+        const session = editor.getSession();
+        const lines = session.getLength();
+        let usedBuiltIn = false;
+        try {
+          if (typeof session.foldAll === 'function') {
+            session.foldAll(0, lines - 1);
+            usedBuiltIn = true;
+          }
+        } catch {}
+        if (!usedBuiltIn) {
+          for (let row = 0; row < lines; row++) {
+            if (session.getFoldWidget(row) === 'start') {
+              const fold = session.getFoldAt(row, 0);
+              if (!fold) {
+                try { session.foldRow(row); } catch {}
+              }
+            }
+          }
+        }
+      });
+      unfoldAllBtn.addEventListener('click', () => {
+        const session = editor.getSession();
+        let unfolded = false;
+        try {
+          const folds = session.getAllFolds?.() || [];
+          if (folds.length) {
+            folds.forEach(f => session.removeFold(f));
+            unfolded = true;
+          }
+        } catch {}
+        if (!unfolded) {
+          const lines = session.getLength();
+          for (let row = 0; row < lines; row++) {
+            try { session.unfold({ row, column: 0 }); } catch {}
+          }
+        }
+      });
+
+      // ----- Download Sample Excel (Hardcoded) -----
+      sampleBtn.addEventListener('click', () => {
+        try {
+          const wb = XLSX.utils.book_new();
+
+          // Demonstrate supported header aliases across multiple sheets (optional)
+          // Primary sample (first sheet): uses canonical headers
+          const sampleRows = [
+            { EmployeeNO: '10001', Roles: 'Admin, Approver' },
+            { EmployeeNO: '10002', Roles: 'Viewer;Editor' },
+            { EmployeeNO: '10003', Roles: 'Reviewer|Publisher' },
+            { EmployeeNO: '10004', Roles: 'Analyst\nContributor' }, // newline-delimited
+            { EmployeeNO: '10005', Roles: '' },                      // empty roles -> skipped (per config)
+            { EmployeeNO: '10006', Roles: "Admin, admin;ADMIN" }     // duplicates to show de-dup
+          ];
+          const ws1 = XLSX.utils.json_to_sheet(sampleRows, { header: ['EmployeeNO', 'Roles'] });
+          XLSX.utils.book_append_sheet(wb, ws1, 'Sample');
+
+          // Optional: A second sheet showing alternate header spellings
+          const altHeaderRows = [
+            { 'Employee No': '20001', Role: 'Operator' },
+            { 'Employee No': '20002', Role: 'Auditor,Checker' },
+            { 'Employee No': '20003', Role: 'Maker\nChecker' }
+          ];
+          const ws2 = XLSX.utils.json_to_sheet(altHeaderRows, { header: ['Employee No', 'Role'] });
+          XLSX.utils.book_append_sheet(wb, ws2, 'AltHeaders');
+
+          // Optional: A third sheet with EmpNo alias
+          const empNoRows = [
+            { EmpNo: '30001', Roles: 'Admin' },
+            { EmpNo: '30002', Roles: 'Viewer;Editor' }
+          ];
+          const ws3 = XLSX.utils.json_to_sheet(empNoRows, { header: ['EmpNo', 'Roles'] });
+          XLSX.utils.book_append_sheet(wb, ws3, 'EmpNoAlias');
+
+          // Write workbook to blob and trigger download
+          const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+          const blob = new Blob([wbout], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'reference_employeeno_roles.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+
+          setStatus('Sample Excel downloaded: reference_employeeno_roles.xlsx', 'ok');
+        } catch (e) {
+          console.error(e);
+          setStatus('Failed to generate sample Excel.', 'error');
+        }
+      });
+
+      // ===== Helpers =====
+      function getHeaderRow(sheet) {
+        const ref = sheet['!ref'];
+        if (!ref) return null;
+        const range = XLSX.utils.decode_range(ref);
+        const headers = [];
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cell = sheet[XLSX.utils.encode_cell({ r: range.s.r, c: C })];
+          headers.push(cell ? String(cell.v) : '');
+        }
+        return headers;
+      }
+      function buildHeaderMap(headers) {
+        const map = {};
+        headers.forEach(h => {
+          const key = String(h || '').trim().toLowerCase();
+          if (key) map[key] = h;
+        });
+        return map;
+      }
+      function resolveAlias(headerMap, aliases) {
+        for (const a of aliases) {
+          if (headerMap[a]) return headerMap[a];
+        }
+        return null;
+      }
+      function parseRoles(cell) {
+        let s = String(cell ?? '').trim();
+        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+          s = s.slice(1, -1);
+        }
+        const parts = s
+          .split(ROLE_DELIMS_REGEX)
+          .map(x => x.trim())
+          .filter(Boolean);
+        const seen = new Set();
+        const out = [];
+        for (let p of parts) {
+          if (NORMALIZE_CASE) p = toTitleCaseWords(p);
+          const key = p.toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            out.push(p);
+          }
+        }
+        return out;
+      }
+      function toTitleCaseWords(s) {
+        return s
+          .split(/(\W+)/)
+          .map(tok => /^[A-Za-z]+$/.test(tok)
+            ? tok.charAt(0).toUpperCase() + tok.slice(1).toLowerCase()
+            : tok
+          )
+          .join('');
+      }
+    }
+
+    // Auto-initialize all instances found on the page
+    document.querySelectorAll('.excel-json-widget').forEach(initExcelJsonWidget);
+  </script>
+</body>
+</html>
