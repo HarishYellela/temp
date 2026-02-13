@@ -2,25 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Excel → JSON (EmployeeNO & Roles) — Responsive + Folding + Sample XLSX</title>
+  <title>Excel → JSON (EmployeeNO & Roles) — by Harish Yellala</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- SheetJS (XLSX) CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Favicon (HY) -->
+  <link rel="icon" type="image/svg+xml"
+        href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" rx="12" fill="%230078d4"/><text x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="white">HY</text></svg>'/>
+
+  <!-- SheetJS (XLSX) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 
   <!-- Ace Editor (folding + JSON mode) -->
-  <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.36.3/src-min-noconflict/ace.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ace-builds@1.36.3/src-min-noconflict/ace.js" defer></script>
   <script>
-    ace.config.set("basePath", "https://cdn.jsdelivr.net/npm/ace-builds@1.36.3/src-min-noconflict");
+    // Point Ace to the CDN base for modes/themes/workers:
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.ace) {
+        ace.config.set("basePath", "https://cdn.jsdelivr.net/npm/ace-builds@1.36.3/src-min-noconflict");
+      }
+    });
   </script>
+
+  <!-- JSON Tree Viewer -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/json-formatter-js@2.5.1/dist/json-formatter.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/json-formatter-js@2.5.1/dist/json-formatter.umd.min.js" defer></script>
 
   <style>
     /* ---------- THEME ---------- */
     :root {
       --txt: #111;
       --muted: #5f6a74;
-      --ok: #0b6a0b;
-      --err: #b00020;
+      --ok: #1e9a1e;
+      --err: #c2383b;
       --border: #e0e0e0;
       --bg: #f6f7f9;
       --card: #ffffff;
@@ -30,6 +43,7 @@
       --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.05);
       --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Segoe UI Mono", monospace;
       --font: "Segoe UI", SegoeUI, Roboto, Helvetica, Arial, sans-serif;
+      color-scheme: light;
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -43,7 +57,14 @@
         --accent: #2994ff;
         --accent-strong: #1580ef;
         --shadow: none;
+        color-scheme: dark;
       }
+    }
+    /* Force theme via data attribute (Theme Toggle) */
+    :root[data-theme="light"] { color-scheme: light; }
+    :root[data-theme="dark"]  {
+      --txt: #e9eef2; --muted:#a1acb6; --ok:#5bd75b; --err:#ff6b7a; --border:#2e3842; --bg:#0f141a; --card:#161b22; --accent:#2994ff; --accent-strong:#1580ef; --shadow:none;
+      color-scheme: dark;
     }
 
     /* ---------- GLOBAL ---------- */
@@ -62,18 +83,25 @@
 
     /* ---------- PAGE WRAP ---------- */
     .page {
-      width: min(1200px, 100%);
+      width: min(1280px, 100%);
       padding: clamp(12px, 3vw, 24px);
+      position: relative;
+    }
+    .brand-tag {
+      position: absolute;
+      top: 12px; right: 20px;
+      background: var(--accent); color: #fff;
+      padding: 6px 12px; border-radius: 999px;
+      font-size: 13px; font-weight: 700;
+      box-shadow: var(--shadow);
     }
     .page h1 {
-      margin: 0 0 10px;
-      font-weight: 600;
-      letter-spacing: 0.2px;
-      text-wrap: balance;
-      font-size: clamp(18px, 2.1vw, 24px);
+      margin: 0 0 8px;
       text-align: center;
+      font-weight: 700;
+      font-size: clamp(20px, 2.1vw, 26px);
     }
-    .page .subtitle {
+    .subtitle {
       color: var(--muted);
       text-align: center;
       margin-bottom: 14px;
@@ -90,14 +118,11 @@
     }
     .split {
       display: grid;
-      grid-template-columns: 1fr;
-      gap: 0;
-      min-height: min(80vh, 980px);
+      grid-template-columns: 420px 6px 1fr; /* left | splitter | right */
+      min-height: min(82vh, 1000px);
     }
-    @media (min-width: 900px) {
-      .split {
-        grid-template-columns: 420px 1fr;
-      }
+    @media (max-width: 899.98px) {
+      .split { grid-template-columns: 1fr; }
     }
 
     /* ---------- LEFT: CONTROL PANEL ---------- */
@@ -110,25 +135,14 @@
       min-width: 0;
     }
     @media (max-width: 899.98px) {
-      .panel {
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-      }
+      .panel { border-right: none; border-bottom: 1px solid var(--border); }
     }
+    .section-title { font-weight: 700; margin: 4px 0 8px; font-size: clamp(14px, 1.6vw, 16px); }
 
-    .section-title {
-      font-weight: 600;
-      margin: 4px 0 8px;
-      font-size: clamp(14px, 1.6vw, 16px);
-    }
-
-    /* Upload zone */
     .dropzone {
-      display: grid;
-      gap: 8px;
+      display: grid; gap: 8px;
       border: 2px dashed var(--border);
-      border-radius: 10px;
-      padding: 14px;
+      border-radius: 10px; padding: 14px;
       background: color-mix(in srgb, var(--card) 94%, var(--bg) 6%);
       transition: 0.2s border-color, 0.2s background, 0.2s color;
     }
@@ -137,127 +151,71 @@
       background: color-mix(in srgb, var(--card) 80%, var(--accent) 20%);
       color: #fff;
     }
-    .file-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      width: 100%;
-    }
+    .file-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; }
     input[type="file"] { max-width: 100%; }
-    .filename {
-      color: var(--muted);
-      font-size: 0.95em;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      flex: 1;
-      min-width: 120px;
-    }
+    .filename { color: var(--muted); font-size: 0.95em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 120px; }
+    .help { color: var(--muted); font-size: 0.95rem; }
+    code { background: color-mix(in srgb, var(--bg) 50%, var(--card) 50%); padding: 1px 4px; border-radius: 4px; border: 1px solid var(--border); }
 
-    /* Radio group */
-    .options {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px 18px;
-      color: var(--muted);
-    }
-    .options label {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-    }
+    .options { display: flex; flex-wrap: wrap; gap: 12px 18px; color: var(--muted); }
+    .options label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
     .options input[type="radio"] { accent-color: var(--accent); }
 
-    /* Sticky action bar */
+    .sep { height: 1px; background: var(--border); margin: 8px 0; width: 100%; }
+    .status-wrap { display: grid; gap: 6px; }
+    .status {
+      color: var(--muted); white-space: pre-wrap; margin: 0; font-size: 0.95rem; min-height: 1.2em;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .badge { display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius: 999px; font-size:12px; border:1px solid var(--border); background: color-mix(in srgb, var(--bg) 60%, var(--card) 40%); color: var(--muted); }
+    .badge.ok { border-color: var(--ok); color: var(--ok); }
+    .badge.err { border-color: var(--err); color: var(--err); }
+
     .actions {
-      position: sticky;
-      bottom: 0;
+      position: sticky; bottom: 0;
       background: var(--card);
       border-top: 1px solid var(--border);
       padding: 10px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: flex-end;
+      display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end;
       z-index: 2;
     }
 
-    /* Buttons */
-    .btn {
-      padding: 9px 14px;
-      border-radius: 8px;
-      border: 1px solid transparent;
-      font-weight: 600;
-      cursor: pointer;
-      transition: 0.18s transform, 0.18s opacity, 0.18s background, 0.18s border-color;
-      font-size: 0.95rem;
-    }
-    .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .btn { padding: 9px 12px; border-radius: 8px; border: 1px solid transparent; font-weight: 700; cursor: pointer; transition: 0.18s; font-size: 0.95rem; background: transparent; color: var(--txt); }
     .btn.primary { background: var(--accent); color: #fff; }
     .btn.primary:hover:not(:disabled) { background: var(--accent-strong); }
-    .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--txt); }
-    .btn.ghost:hover:not(:disabled) { border-color: var(--accent); }
+    .btn.ghost { border: 1px solid var(--border); }
+    .btn:hover:not(:disabled) { border-color: var(--accent); }
     .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .select { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--txt); font-weight: 600; }
 
-    /* Status + help */
-    .status {
-      color: var(--muted);
-      white-space: pre-wrap;
-      margin: 0;
-      min-height: 1.4em;
-      font-size: 0.95rem;
-    }
-    .status.ok { color: var(--ok); }
-    .status.error { color: var(--err); }
-    .help {
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-    code {
-      background: color-mix(in srgb, var(--bg) 50%, var(--card) 50%);
-      padding: 1px 4px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-    }
-    .sep { height: 1px; background: var(--border); margin: 8px 0; width: 100%; }
+    .splitter { background: var(--border); cursor: col-resize; }
+    .splitter:hover { background: var(--accent); }
+    @media (max-width: 899.98px) { .splitter { display: none; } }
 
-    /* ---------- RIGHT: JSON PREVIEW ---------- */
-    .preview {
-      display: grid;
-      grid-template-rows: auto 1fr;
-      min-width: 0;
-    }
+    .preview { display: grid; grid-template-rows: auto 1fr; min-width: 0; }
     .preview-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
       padding: clamp(10px, 2vw, 14px);
       border-bottom: 1px solid var(--border);
       background: color-mix(in srgb, var(--card) 94%, var(--bg) 6%);
-    }
-    .preview-title {
-      font-weight: 600;
-      font-size: clamp(14px, 1.6vw, 16px);
-    }
-    .preview-actions {
-      display: flex;
-      gap: 8px;
       flex-wrap: wrap;
     }
+    .controls-left, .controls-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .preview-title { font-weight: 700; font-size: clamp(14px, 1.6vw, 16px); }
 
-    /* Ace editor container */
-    .json-editor {
-      width: 100%;
-      min-height: 300px;
-      height: 100%;
-      border-left: 1px solid var(--border);
-    }
+    .json-editor { width: 100%; min-height: 300px; height: 100%; border-left: 1px solid var(--border); }
+    .json-tree { display:none; width:100%; height:100%; overflow:auto; padding: 10px 14px; border-left: 1px solid var(--border); }
     @media (max-width: 899.98px) {
-      .json-editor { border-left: none; }
+      .json-editor, .json-tree { border-left: none; }
     }
+
+    #toast { position: fixed; right: 16px; bottom: 16px; z-index: 9999; display: grid; gap: 8px; pointer-events: none; }
+    .toast { background: var(--card); color: var(--txt); border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 8px; padding: 10px 12px; pointer-events: auto; }
+    .toast.ok { border-color: var(--ok); }
+    .toast.err { border-color: var(--err); }
+
+    .spinner { width:16px; height:16px; border:2px solid var(--border); border-top-color: var(--accent); border-radius:50%; display:inline-block; animation: spin .8s linear infinite; vertical-align:middle; margin-left:6px; }
+    @keyframes spin { to { transform: rotate(360deg) } }
 
     .no-shrink { flex-shrink: 0; }
   </style>
@@ -265,10 +223,13 @@
 
 <body>
   <main class="page">
+    <div class="brand-tag">Made by Harish Yellala</div>
     <h1>Excel → JSON: EmployeeNO &amp; Roles</h1>
-      <section class="card split excel-json-widget" aria-label="Excel to JSON widget">
+ 
+
+    <section class="card split excel-json-widget" aria-label="Excel to JSON widget">
       <!-- LEFT: Controls -->
-      <aside class="panel">
+      <aside class="panel" aria-live="polite" aria-busy="false">
         <div>
           <div class="section-title">Upload</div>
           <div class="dropzone" aria-label="Drag and drop Excel file here" tabindex="0">
@@ -297,43 +258,92 @@
           </div>
         </div>
 
-        <div>
+        <div class="status-wrap">
+          <div class="chips"></div>
           <div class="sep"></div>
-          <pre class="status" role="status" aria-live="polite"></pre>
+          <pre class="status" role="status"></pre>
         </div>
 
         <div class="actions">
-          <button class="btn ghost sample-xlsx-btn">Download Sample Excel</button>
+          <button class="btn ghost sample-xlsx-btn" title="Download reference Excel">Download Sample Excel</button>
+          <button class="btn ghost paste-btn" title="Paste table/CSV from clipboard">Paste Table</button>
           <button class="btn ghost parse-btn" disabled>Parse to JSON</button>
           <button class="btn ghost download-btn" disabled>Download JSON</button>
+          <button class="btn ghost export-csv-btn" disabled title="Export exploded CSV">Export CSV</button>
+          <button class="btn ghost export-jsonl-btn" disabled title="Export JSON Lines">Export JSONL</button>
           <button class="btn primary copy-btn" disabled>Copy JSON</button>
         </div>
       </aside>
 
+      <!-- SPLITTER -->
+      <div class="splitter" aria-hidden="true"></div>
+
       <!-- RIGHT: JSON Preview -->
       <section class="preview" aria-label="JSON Preview">
         <div class="preview-header">
-          <div class="preview-title">Output JSON</div>
-          <div class="preview-actions">
+          <div class="controls-left">
+            <div class="preview-title">Output</div>
+            <input type="search" class="search-input select" placeholder="Search (Editor view)" title="Ctrl/Cmd+F also works in editor">
+            <select class="theme-toggle select" title="Theme">
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+            <button class="btn ghost view-toggle-btn" title="Toggle Editor / Tree">Tree View</button>
+            <label class="no-shrink">
+              <span class="help" style="margin-right:6px;">Depth</span>
+              <select class="select depth-select" title="Tree expand depth">
+                <option value="0">0</option>
+                <option value="1" selected>1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="99">All</option>
+              </select>
+            </label>
+          </div>
+          <div class="controls-right">
             <button class="btn ghost fold-all-btn" disabled>Fold All</button>
             <button class="btn ghost unfold-all-btn" disabled>Unfold All</button>
             <button class="btn ghost collapse-btn" aria-expanded="true">Collapse Preview</button>
           </div>
         </div>
-        <div class="json-editor" aria-label="JSON output"></div>
+        <div class="json-editor" aria-label="JSON output (editor)"></div>
+        <div class="json-tree" aria-label="JSON output (tree)"></div>
       </section>
     </section>
   </main>
 
+  <!-- Toast host -->
+  <div id="toast" aria-live="polite"></div>
+
   <script>
-    // Initialize the widget by passing a root element (supports multiple instances)
+    // ====== CONSTANTS / CONFIG ======
+    const ROLE_DELIMS_REGEX = /[,;|\n\r]+/; // split on comma, semicolon, pipe, and newlines
+    const NORMALIZE_CASE = false;           // true -> TitleCase roles
+    const SKIP_ROWS_WITH_NO_ROLES = true;   // drop rows that end with no roles
+    const EMP_ALIASES   = ['employeeno', 'employee no', 'empno', 'employee_no', 'employee number'];
+    const ROLES_ALIASES = ['roles', 'role'];
+
+    // ====== INIT ======
+    window.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.excel-json-widget').forEach(initExcelJsonWidget);
+    });
+
     function initExcelJsonWidget(root) {
+      const panel           = root.querySelector('.panel');
+      const card            = root.closest('.split');
+      const splitter        = root.querySelector('.splitter');
+
       const fileInput       = root.querySelector('.file-input');
       const filenameEl      = root.querySelector('.filename');
       const parseBtn        = root.querySelector('.parse-btn');
       const downloadBtn     = root.querySelector('.download-btn');
       const copyBtn         = root.querySelector('.copy-btn');
+      const exportCsvBtn    = root.querySelector('.export-csv-btn');
+      const exportJsonlBtn  = root.querySelector('.export-jsonl-btn');
       const statusEl        = root.querySelector('.status');
+      const chipsEl         = root.querySelector('.chips');
       const outArrayRadio   = root.querySelector('.outmode-array');
       const outExplodeRadio = root.querySelector('.outmode-explode');
       const dropzone        = root.querySelector('.dropzone');
@@ -341,12 +351,22 @@
       const foldAllBtn      = root.querySelector('.fold-all-btn');
       const unfoldAllBtn    = root.querySelector('.unfold-all-btn');
       const sampleBtn       = root.querySelector('.sample-xlsx-btn');
-      const editorEl        = root.querySelector('.json-editor');
+      const pasteBtn        = root.querySelector('.paste-btn');
 
-      // ----- Ace Editor Setup -----
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const editorEl        = root.querySelector('.json-editor');
+      const treeEl          = root.querySelector('.json-tree');
+      const viewToggleBtn   = root.querySelector('.view-toggle-btn');
+      const depthSelect     = root.querySelector('.depth-select');
+      const themeToggle     = root.querySelector('.theme-toggle');
+      const searchInput     = root.querySelector('.search-input');
+
+      // Ace Editor
+      if (!window.ace) {
+        console.error('Ace failed to load.');
+        statusEl.textContent = 'Editor failed to load. Check network.';
+        return;
+      }
       const editor = ace.edit(editorEl);
-      editor.setTheme(prefersDark ? 'ace/theme/twilight' : 'ace/theme/textmate');
       editor.session.setMode('ace/mode/json');
       editor.setReadOnly(true);
       editor.setOptions({
@@ -357,51 +377,180 @@
         fontSize: '12.5px',
         fontFamily: 'Consolas, "Segoe UI Mono", ui-monospace, Menlo, monospace'
       });
+
+      // Theme Management (null-safe)
+      function sysPrefersDark() {
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      function applyTheme(mode) {
+        const dark = mode === 'dark' || (mode === 'system' && sysPrefersDark());
+        editor.setTheme(dark ? 'ace/theme/twilight' : 'ace/theme/textmate');
+        // Set explicit theme only for forced modes
+        document.documentElement.dataset.theme = (mode === 'system') ? '' : (dark ? 'dark' : 'light');
+        localStorage.setItem('ej_theme', mode);
+      }
+      const savedTheme = localStorage.getItem('ej_theme') || 'system';
+      applyTheme(savedTheme);
+      if (themeToggle) {
+        themeToggle.value = savedTheme;
+        themeToggle.addEventListener('change', e => applyTheme(e.target.value));
+      }
       try {
-        // Sync editor theme with OS theme change
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-          editor.setTheme(e.matches ? 'ace/theme/twilight' : 'ace/theme/textmate');
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+          const mode = localStorage.getItem('ej_theme') || 'system';
+          applyTheme(mode);
         });
       } catch {}
 
+      // State
       let currentJson = [];
+      let viewMode = localStorage.getItem('ej_view') || 'editor'; // 'editor' | 'tree'
+      let currentDepth = parseInt(localStorage.getItem('ej_depth') || '1', 10);
+      if (depthSelect) depthSelect.value = String(currentDepth);
 
-      // ===== Config =====
-      const ROLE_DELIMS_REGEX = /[,;|\n\r]+/; // split on comma, semicolon, pipe, and newlines
-      const NORMALIZE_CASE = false;           // true -> TitleCase roles; false preserves "BDX_ASIG"
-      const SKIP_ROWS_WITH_NO_ROLES = true;   // drop rows that end with no roles
-      // Header aliases
-      const EMP_ALIASES   = ['employeeno', 'employee no', 'empno', 'employee_no', 'employee number'];
-      const ROLES_ALIASES = ['roles', 'role'];
+      // Persist output mode
+      const savedMode = localStorage.getItem('ej_mode') || 'array';
+      if (savedMode === 'explode' && outExplodeRadio) outExplodeRadio.checked = true;
+      if (savedMode === 'array' && outArrayRadio) outArrayRadio.checked = true;
 
       // ----- Helpers -----
+      const toastHost = document.getElementById('toast');
+      function toast(msg, type='ok', timeout=2500) {
+        const el = document.createElement('div');
+        el.className = `toast ${type==='error'?'err':'ok'}`;
+        el.textContent = msg;
+        toastHost.appendChild(el);
+        setTimeout(() => el.remove(), timeout);
+      }
+
       function setStatus(message, variant) {
         statusEl.textContent = message || '';
         statusEl.className = `status ${variant === 'error' ? 'error' : (variant === 'ok' ? 'ok' : '')}`;
       }
+
       function setFileName(name) {
         filenameEl.textContent = name || 'No file selected';
         filenameEl.title = filenameEl.textContent;
       }
+
       function resetOutput() {
         editor.setValue('', -1);
+        treeEl.replaceChildren();
         currentJson = [];
-        downloadBtn.disabled = true;
-        copyBtn.disabled = true;
-        foldAllBtn.disabled = true;
-        unfoldAllBtn.disabled = true;
+        [downloadBtn, copyBtn, exportCsvBtn, exportJsonlBtn, foldAllBtn, unfoldAllBtn].forEach(b => b && (b.disabled = true));
       }
+
       function enableParse(enable) {
-        parseBtn.disabled = !enable;
+        if (parseBtn) parseBtn.disabled = !enable;
       }
-      function togglePreview() {
-        const expanded = collapseBtn.getAttribute('aria-expanded') === 'true';
-        editorEl.style.display = expanded ? 'none' : 'block';
-        collapseBtn.textContent = expanded ? 'Expand Preview' : 'Collapse Preview';
-        collapseBtn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-        if (!expanded) setTimeout(() => editor.resize(), 0);
+
+      function setBusy(on) {
+        panel.setAttribute('aria-busy', on ? 'true' : 'false');
+        if (parseBtn) parseBtn.disabled = on || parseBtn.disabled;
+        if (downloadBtn) downloadBtn.disabled = on || !currentJson.length;
+        if (copyBtn) copyBtn.disabled = on || !currentJson.length;
+        if (exportCsvBtn) exportCsvBtn.disabled = on || !currentJson.length;
+        if (exportJsonlBtn) exportJsonlBtn.disabled = on || !currentJson.length;
+        if (collapseBtn) collapseBtn.disabled = on;
+        if (on) {
+          setStatus('Parsing... ', '');
+          const sp = document.createElement('span'); sp.className = 'spinner';
+          statusEl.appendChild(sp);
+        }
       }
-      collapseBtn.addEventListener('click', togglePreview);
+
+      function renderEditorOrTree() {
+        if (viewMode === 'tree') {
+          editorEl.style.display = 'none';
+          treeEl.style.display = 'block';
+          showTree(currentJson);
+          if (viewToggleBtn) viewToggleBtn.textContent = 'Editor View';
+          if (foldAllBtn) foldAllBtn.disabled = true;
+          if (unfoldAllBtn) unfoldAllBtn.disabled = true;
+        } else {
+          treeEl.style.display = 'none';
+          editorEl.style.display = 'block';
+          if (viewToggleBtn) viewToggleBtn.textContent = 'Tree View';
+          if (foldAllBtn) foldAllBtn.disabled = !currentJson.length;
+          if (unfoldAllBtn) unfoldAllBtn.disabled = !currentJson.length;
+          setTimeout(() => editor.resize(), 0);
+        }
+      }
+
+      function showTree(data) {
+        treeEl.replaceChildren();
+        const depth = currentDepth >= 99 ? Infinity : currentDepth;
+        try {
+          if (window.JSONFormatter) {
+            const darkForced = document.documentElement.dataset.theme === 'dark';
+            const formatter = new JSONFormatter(data, depth, { theme: darkForced ? 'dark' : '' });
+            treeEl.appendChild(formatter.render());
+          } else {
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(data, null, 2);
+            treeEl.appendChild(pre);
+          }
+        } catch (e) {
+          const pre = document.createElement('pre');
+          pre.textContent = 'Unable to render tree view.\n' + e.message;
+          treeEl.appendChild(pre);
+        }
+      }
+
+      function clearChips() { chipsEl.replaceChildren(); }
+      function addChip(text, kind='') {
+        const c = document.createElement('span'); c.className = `badge ${kind}`; c.textContent = text; chipsEl.appendChild(c);
+      }
+
+      function buildCSVExploded(arr) {
+        let exploded = arr;
+        if (!arr.length) return '';
+        if (!('Role' in arr[0])) {
+          exploded = [];
+          for (const rec of arr) for (const role of (rec.Roles || [])) exploded.push({ EmployeeNO: rec.EmployeeNO, Role: role });
+        }
+        const ws = XLSX.utils.json_to_sheet(exploded);
+        return XLSX.utils.sheet_to_csv(ws);
+      }
+
+      function triggerDownload(blob, name) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      }
+
+      function detectOleOrEncryptedHead(head) {
+        const isZip = head[0] === 0x50 && head[1] === 0x4B; // "PK"
+        const isOle = head[0] === 0xD0 && head[1] === 0xCF && head[2] === 0x11 && head[3] === 0xE0; // D0 CF 11 E0
+        return { isZip, isOle };
+      }
+
+      // ----- Splitter -----
+      if (splitter) {
+        let startX, startW;
+        splitter.addEventListener('mousedown', (e) => {
+          if (window.innerWidth < 900) return;
+          startX = e.clientX;
+          startW = root.querySelector('.panel').getBoundingClientRect().width;
+          document.body.style.userSelect = 'none';
+          const move = (ev) => {
+            const dx = ev.clientX - startX;
+            const newW = Math.max(300, Math.min(700, startW + dx));
+            card.style.gridTemplateColumns = `${newW}px 6px 1fr`;
+            localStorage.setItem('ej_panel_w', String(newW));
+            editor.resize();
+          };
+          const up = () => {
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('mouseup', up);
+            document.body.style.userSelect = '';
+          };
+          document.addEventListener('mousemove', move);
+          document.addEventListener('mouseup', up);
+        });
+        const savedW = +localStorage.getItem('ej_panel_w');
+        if (savedW) card.style.gridTemplateColumns = `${savedW}px 6px 1fr`;
+      }
 
       // ----- Drag & Drop -----
       ;['dragenter','dragover'].forEach(evt => {
@@ -416,13 +565,15 @@
           dropzone.classList.remove('dragover');
         });
       });
-      dropzone.addEventListener('drop', (e) => {
+      dropzone.addEventListener('drop', async (e) => {
         const dt = e.dataTransfer;
         if (dt && dt.files && dt.files[0]) {
+          const f = dt.files[0];
           fileInput.files = dt.files;
-          setFileName(dt.files[0].name);
+          setFileName(f.name);
           setStatus('');
           resetOutput();
+          await precheckFileEncryption(f);
           enableParse(true);
         }
       });
@@ -434,68 +585,141 @@
       });
 
       // ----- File picker -----
-      fileInput.addEventListener('change', () => {
-        const name = fileInput.files?.[0]?.name || '';
-        setFileName(name);
+      fileInput.addEventListener('change', async () => {
+        const file = fileInput.files?.[0];
+        setFileName(file?.name || '');
         setStatus('');
         resetOutput();
-        enableParse(!!name);
+        if (!file) { enableParse(false); return; }
+        await precheckFileEncryption(file);
+        enableParse(true);
+      });
+
+      async function precheckFileEncryption(file) {
+        try {
+          const head = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+          const { isZip, isOle } = detectOleOrEncryptedHead(head);
+          if (isOle && !isZip) {
+            setStatus(
+              'Heads-up: This looks like an OLE workbook (older .xls or an encrypted .xlsx).\n' +
+              'If it is password-protected, open in Excel → File → Info → Protect Workbook → Encrypt with Password → clear → Save as .xlsx.\n' +
+              'If it is .xls, please Save As .xlsx and re-upload.',
+              'error'
+            );
+          }
+        } catch {}
+      }
+
+      // ----- Output mode persistence -----
+      outExplodeRadio?.addEventListener('change', ()=>localStorage.setItem('ej_mode','explode'));
+      outArrayRadio?.addEventListener('change', ()=>localStorage.setItem('ej_mode','array'));
+
+      // ----- View toggle & depth -----
+      function applyViewMode() {
+        localStorage.setItem('ej_view', viewMode);
+        renderEditorOrTree();
+      }
+      viewToggleBtn?.addEventListener('click', () => {
+        viewMode = (viewMode === 'editor') ? 'tree' : 'editor';
+        applyViewMode();
+      });
+      depthSelect?.addEventListener('change', () => {
+        currentDepth = parseInt(depthSelect.value, 10);
+        localStorage.setItem('ej_depth', String(currentDepth));
+        if (viewMode === 'tree' && currentJson.length) showTree(currentJson);
+      });
+
+      // ----- Collapse preview -----
+      function togglePreview() {
+        const expanded = collapseBtn.getAttribute('aria-expanded') === 'true';
+        if (expanded) {
+          editorEl.style.display = 'none';
+          treeEl.style.display = 'none';
+          collapseBtn.textContent = 'Expand Preview';
+          collapseBtn.setAttribute('aria-expanded', 'false');
+        } else {
+          collapseBtn.textContent = 'Collapse Preview';
+          collapseBtn.setAttribute('aria-expanded', 'true');
+          renderEditorOrTree();
+        }
+        if (!expanded) setTimeout(() => editor.resize(), 0);
+      }
+      collapseBtn?.addEventListener('click', togglePreview);
+
+      // ----- Search (Editor view) -----
+      searchInput?.addEventListener('input', (e) => {
+        if (viewMode !== 'editor') return;
+        const needle = e.target.value;
+        if (!needle) return;
+        editor.find(needle, { regExp:false, wrap:true, caseSensitive:false, wholeWord:false });
       });
 
       // ----- Parse -----
       parseBtn.addEventListener('click', async () => {
         try {
           if (!fileInput.files || !fileInput.files[0]) {
-            setStatus('Please choose an Excel file first.', 'error');
-            return;
+            setStatus('Please choose an Excel file first.', 'error'); return;
           }
-
-          setStatus('Reading file...');
           const file = fileInput.files[0];
+
+          setBusy(true);
+          setStatus('Parsing file...');
           const data = await file.arrayBuffer();
 
-          // Read the workbook
-          const workbook = XLSX.read(data, { type: 'array' });
-
-          if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-            setStatus('No sheets found in the workbook.', 'error');
-            return;
+          // Head re-check
+          {
+            const head = new Uint8Array(data).subarray(0, 8);
+            const { isZip, isOle } = detectOleOrEncryptedHead(head);
+            if (isOle && !isZip) {
+              setStatus(
+                'This file appears to be OLE/encrypted. Please remove password (Excel → File → Info → Protect Workbook) or convert to .xlsx and retry.',
+                'error'
+              );
+              setBusy(false);
+              return;
+            }
           }
 
-          // Read first sheet
+          const workbook = XLSX.read(data, { type: 'array' });
+          if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+            setStatus('No sheets found in the workbook.', 'error'); setBusy(false); return;
+          }
+
           const firstSheetName = workbook.SheetNames[0];
           const sheet = workbook.Sheets[firstSheetName];
 
-          // Convert to row objects (keys from headers)
           const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
-          if (rows.length === 0) {
-            setStatus('The first sheet appears to be empty.', 'error');
-            return;
-          }
+          if (rows.length === 0) { setStatus('The first sheet appears to be empty.', 'error'); setBusy(false); return; }
 
-          // Extract header row for alias mapping
+          // Headers
           const headerRow = getHeaderRow(sheet);
-          if (!headerRow) {
-            setStatus('Could not detect a header row.', 'error');
-            return;
-          }
-          const headerMap = buildHeaderMap(headerRow); // lower -> original
+          if (!headerRow) { setStatus('Could not detect a header row.', 'error'); setBusy(false); return; }
+          const headerMap = buildHeaderMap(headerRow);
 
           // Resolve keys using aliases
           const empKey   = resolveAlias(headerMap, EMP_ALIASES);
           const rolesKey = resolveAlias(headerMap, ROLES_ALIASES);
 
+          clearChips();
           if (!empKey || !rolesKey) {
             const found = Object.keys(headerMap).join(', ') || 'none';
             setStatus(
-              `Required columns not found. Needed any of [${EMP_ALIASES.join(', ')}] and any of ` +
-              `[${ROLES_ALIASES.join(', ')}]. Found headers: ${found}`,
+              `Required columns not found. Needed any of [${EMP_ALIASES.join(', ')}] and any of [` +
+              `${ROLES_ALIASES.join(', ')}]. Found headers: ${found}`,
               'error'
             );
+            addChip('Missing required headers', 'err');
+            setBusy(false);
             return;
           }
 
-          // Build normalized array (EmployeeNO + Roles[])
+          // Validation: missing EmployeeNO, empty roles count
+          const missingEmpCount = rows.filter(r => !String(r[empKey]||'').trim()).length;
+          const emptyRolesCount = rows.filter(r => !String(r[rolesKey]||'').trim()).length;
+          if (missingEmpCount) addChip(`${missingEmpCount} row(s) missing EmployeeNO`, 'err');
+          if (emptyRolesCount) addChip(`${emptyRolesCount} row(s) with empty Roles`, SKIP_ROWS_WITH_NO_ROLES ? 'err' : '');
+
+          // Normalize
           const normalized = rows.map(r => {
             const emp = String(r[empKey] ?? '').trim();
             const rolesRaw = String(r[rolesKey] ?? '');
@@ -508,40 +732,59 @@
           });
 
           if (normalized.length === 0) {
-            setStatus('No valid data rows found after parsing.', 'error');
-            return;
+            setStatus('No valid data rows found after parsing.', 'error'); setBusy(false); return;
           }
 
           // Output mode: array vs explode
           let result;
-          if (outExplodeRadio.checked) {
+          if (outExplodeRadio?.checked) {
             result = [];
-            for (const rec of normalized) {
-              for (const role of rec.Roles) {
-                result.push({ EmployeeNO: rec.EmployeeNO, Role: role });
-              }
-            }
+            for (const rec of normalized) for (const role of rec.Roles) result.push({ EmployeeNO: rec.EmployeeNO, Role: role });
           } else {
             result = normalized;
           }
 
           currentJson = result;
           editor.setValue(JSON.stringify(result, null, 2), -1);
+          if (viewMode === 'tree') showTree(result);
 
-          const countExploded = outExplodeRadio.checked ? ` Exploded to ${result.length} employee-role row(s).` : '';
-          setStatus(`Parsed ${normalized.length} employee row(s) from "${firstSheetName}".` + countExploded, 'ok');
-          downloadBtn.disabled = false;
-          copyBtn.disabled = false;
-          foldAllBtn.disabled = false;
-          unfoldAllBtn.disabled = false;
+          // Stats chips
+          const uniqueEmp = new Set(result.map(x => x.EmployeeNO)).size;
+          const uniqueRoles = (() => {
+            const s = new Set();
+            if (result.length && 'Roles' in result[0]) {
+              result.forEach(r => (r.Roles||[]).forEach(v => s.add(v)));
+            } else {
+              result.forEach(r => s.add(r.Role));
+            }
+            return s.size;
+          })();
+          addChip(`Employees: ${uniqueEmp}`, 'ok');
+          addChip(`Unique roles: ${uniqueRoles}`, 'ok');
+          if (outExplodeRadio?.checked) addChip(`Exploded rows: ${result.length}`, '');
 
-          // Optional host integration:
-          // $Context.outputs.Json = editor.getValue();
-          // $Context.submit?.();
+          setStatus(`Parsed ${normalized.length} employee row(s) from "${firstSheetName}".`, 'ok');
+          [downloadBtn, copyBtn, exportCsvBtn, exportJsonlBtn, foldAllBtn, unfoldAllBtn].forEach(b => b && (b.disabled = false));
+
+          setBusy(false);
+          toast('Parsing complete');
 
         } catch (err) {
           console.error(err);
-          setStatus('An error occurred while parsing the file. See console for details.', 'error');
+          const msg = String(err && (err.message || err)).toLowerCase();
+          if (
+            (msg.includes('ecma-376') && msg.includes('encryptioninfo')) ||
+            msg.includes('password') || msg.includes('encrypted') || msg.includes('cfb read')
+          ) {
+            setStatus(
+              'This workbook seems password‑protected or malformed.\n' +
+              'Open in Excel → File → Info → Protect Workbook → Encrypt with Password → clear → Save as .xlsx and retry.',
+              'error'
+            );
+          } else {
+            setStatus('An error occurred while parsing the file. See console for details.', 'error');
+          }
+          setBusy(false);
         }
       });
 
@@ -550,52 +793,56 @@
         if (!currentJson.length) return;
         const pretty = JSON.stringify(currentJson, null, 2);
         const blob = new Blob([pretty], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
         const baseName = (fileInput.files?.[0]?.name || 'employees').replace(/\.(xlsx|xls)$/i, '');
-        a.href = url;
-        a.download = `${baseName}_employeeno_roles.json`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        triggerDownload(blob, `${baseName}_employeeno_roles.json`);
+        toast('JSON downloaded');
       });
 
       // ----- Copy JSON -----
       copyBtn.addEventListener('click', async () => {
-        const text = editor.getValue() || '';
+        const text = (viewMode === 'editor') ? editor.getValue() : JSON.stringify(currentJson, null, 2);
         try {
           await navigator.clipboard.writeText(text);
           setStatus('JSON copied to clipboard!', 'ok');
+          toast('Copied to clipboard');
         } catch {
           const tmp = document.createElement('textarea');
-          tmp.value = text;
-          document.body.appendChild(tmp);
-          tmp.select();
-          const ok = document.execCommand('copy');
-          tmp.remove();
+          tmp.value = text; document.body.appendChild(tmp); tmp.select();
+          const ok = document.execCommand('copy'); tmp.remove();
           setStatus(ok ? 'JSON copied to clipboard!' : 'Failed to copy JSON.', ok ? 'ok' : 'error');
+          toast(ok ? 'Copied to clipboard' : 'Copy failed', ok ? 'ok' : 'error');
         }
       });
 
-      // ----- Fold All / Unfold All -----
+      // ----- Export CSV (Exploded) -----
+      exportCsvBtn.addEventListener('click', () => {
+        if (!currentJson.length) return;
+        const csv = buildCSVExploded(currentJson);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        triggerDownload(blob, 'employees_roles.csv');
+        toast('CSV exported');
+      });
+
+      // ----- Export JSONL -----
+      exportJsonlBtn.addEventListener('click', () => {
+        if (!currentJson.length) return;
+        const lines = currentJson.map(o => JSON.stringify(o) + '\n');
+        const blob = new Blob(lines, { type: 'application/x-ndjson' });
+        triggerDownload(blob, 'employees_roles.jsonl');
+        toast('JSONL exported');
+      });
+
+      // ----- Fold / Unfold (Editor) -----
       foldAllBtn.addEventListener('click', () => {
         const session = editor.getSession();
         const lines = session.getLength();
         let usedBuiltIn = false;
-        try {
-          if (typeof session.foldAll === 'function') {
-            session.foldAll(0, lines - 1);
-            usedBuiltIn = true;
-          }
-        } catch {}
+        try { if (typeof session.foldAll === 'function') { session.foldAll(0, lines - 1); usedBuiltIn = true; } } catch {}
         if (!usedBuiltIn) {
           for (let row = 0; row < lines; row++) {
             if (session.getFoldWidget(row) === 'start') {
               const fold = session.getFoldAt(row, 0);
-              if (!fold) {
-                try { session.foldRow(row); } catch {}
-              }
+              if (!fold) { try { session.foldRow(row); } catch {} }
             }
           }
         }
@@ -605,16 +852,11 @@
         let unfolded = false;
         try {
           const folds = session.getAllFolds?.() || [];
-          if (folds.length) {
-            folds.forEach(f => session.removeFold(f));
-            unfolded = true;
-          }
+          if (folds.length) { folds.forEach(f => session.removeFold(f)); unfolded = true; }
         } catch {}
         if (!unfolded) {
           const lines = session.getLength();
-          for (let row = 0; row < lines; row++) {
-            try { session.unfold({ row, column: 0 }); } catch {}
-          }
+          for (let row = 0; row < lines; row++) { try { session.unfold({ row, column: 0 }); } catch {} }
         }
       });
 
@@ -622,21 +864,17 @@
       sampleBtn.addEventListener('click', () => {
         try {
           const wb = XLSX.utils.book_new();
-
-          // Demonstrate supported header aliases across multiple sheets (optional)
-          // Primary sample (first sheet): uses canonical headers
           const sampleRows = [
             { EmployeeNO: '10001', Roles: 'Admin, Approver' },
             { EmployeeNO: '10002', Roles: 'Viewer;Editor' },
             { EmployeeNO: '10003', Roles: 'Reviewer|Publisher' },
-            { EmployeeNO: '10004', Roles: 'Analyst\nContributor' }, // newline-delimited
-            { EmployeeNO: '10005', Roles: '' },                      // empty roles -> skipped (per config)
-            { EmployeeNO: '10006', Roles: "Admin, admin;ADMIN" }     // duplicates to show de-dup
+            { EmployeeNO: '10004', Roles: 'Analyst\nContributor' },
+            { EmployeeNO: '10005', Roles: '' },
+            { EmployeeNO: '10006', Roles: "Admin, admin;ADMIN" }
           ];
           const ws1 = XLSX.utils.json_to_sheet(sampleRows, { header: ['EmployeeNO', 'Roles'] });
           XLSX.utils.book_append_sheet(wb, ws1, 'Sample');
 
-          // Optional: A second sheet showing alternate header spellings
           const altHeaderRows = [
             { 'Employee No': '20001', Role: 'Operator' },
             { 'Employee No': '20002', Role: 'Auditor,Checker' },
@@ -645,7 +883,6 @@
           const ws2 = XLSX.utils.json_to_sheet(altHeaderRows, { header: ['Employee No', 'Role'] });
           XLSX.utils.book_append_sheet(wb, ws2, 'AltHeaders');
 
-          // Optional: A third sheet with EmpNo alias
           const empNoRows = [
             { EmpNo: '30001', Roles: 'Admin' },
             { EmpNo: '30002', Roles: 'Viewer;Editor' }
@@ -653,31 +890,119 @@
           const ws3 = XLSX.utils.json_to_sheet(empNoRows, { header: ['EmpNo', 'Roles'] });
           XLSX.utils.book_append_sheet(wb, ws3, 'EmpNoAlias');
 
-          // Write workbook to blob and trigger download
           const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-          const blob = new Blob([wbout], {
-            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-          });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'reference_employeeno_roles.xlsx';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
-
-          setStatus('Sample Excel downloaded: reference_employeeno_roles.xlsx', 'ok');
+          const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          triggerDownload(blob, 'reference_employeeno_roles.xlsx');
+          toast('Sample Excel downloaded');
         } catch (e) {
           console.error(e);
           setStatus('Failed to generate sample Excel.', 'error');
         }
       });
 
-      // ===== Helpers =====
+      // ----- Paste from Clipboard (CSV/TSV/table) -----
+      pasteBtn.addEventListener('click', async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          if (!text) { toast('Clipboard is empty', 'error'); return; }
+          setBusy(true);
+          const wb = XLSX.read(text, { type: 'string' });
+          const sheetName = wb.SheetNames[0];
+          const sheet = wb.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: true });
+          if (!rows.length) { setStatus('Clipboard table looks empty.', 'error'); setBusy(false); return; }
+
+          const headerRow = getHeaderRow(sheet);
+          const headerMap = buildHeaderMap(headerRow);
+          const empKey   = resolveAlias(headerMap, EMP_ALIASES);
+          const rolesKey = resolveAlias(headerMap, ROLES_ALIASES);
+
+          clearChips();
+          if (!empKey || !rolesKey) {
+            const found = Object.keys(headerMap).join(', ') || 'none';
+            setStatus(
+              `Clipboard data missing required columns. Need [${EMP_ALIASES.join(', ')}] and [${ROLES_ALIASES.join(', ')}]. Found: ${found}`,
+              'error'
+            );
+            addChip('Missing required headers', 'err');
+            setBusy(false);
+            return;
+          }
+
+          const missingEmpCount = rows.filter(r => !String(r[empKey]||'').trim()).length;
+          const emptyRolesCount = rows.filter(r => !String(r[rolesKey]||'').trim()).length;
+          if (missingEmpCount) addChip(`${missingEmpCount} row(s) missing EmployeeNO`, 'err');
+          if (emptyRolesCount) addChip(`${emptyRolesCount} row(s) with empty Roles`, SKIP_ROWS_WITH_NO_ROLES ? 'err' : '');
+
+          const normalized = rows.map(r => {
+            const emp = String(r[empKey] ?? '').trim();
+            const rolesRaw = String(r[rolesKey] ?? '');
+            const rolesArr = parseRoles(rolesRaw);
+            return { EmployeeNO: emp, Roles: rolesArr };
+          }).filter(item => {
+            const hasEmp = item.EmployeeNO.length > 0;
+            const hasRoles = item.Roles.length > 0;
+            return hasEmp && (SKIP_ROWS_WITH_NO_ROLES ? hasRoles : true);
+          });
+
+          if (!normalized.length) { setStatus('No valid data after parsing clipboard.', 'error'); setBusy(false); return; }
+
+          let result;
+          if (outExplodeRadio?.checked) {
+            result = [];
+            for (const rec of normalized) for (const role of rec.Roles) result.push({ EmployeeNO: rec.EmployeeNO, Role: role });
+          } else {
+            result = normalized;
+          }
+          currentJson = result;
+          editor.setValue(JSON.stringify(result, null, 2), -1);
+          if (viewMode === 'tree') showTree(result);
+
+          const uniqueEmp = new Set(result.map(x => x.EmployeeNO)).size;
+          const uniqueRoles = (() => {
+            const s = new Set();
+            if (result.length && 'Roles' in result[0]) {
+              result.forEach(r => (r.Roles||[]).forEach(v => s.add(v)));
+            } else {
+              result.forEach(r => s.add(r.Role));
+            }
+            return s.size;
+          })();
+          addChip(`Employees: ${uniqueEmp}`, 'ok');
+          addChip(`Unique roles: ${uniqueRoles}`, 'ok');
+          if (outExplodeRadio?.checked) addChip(`Exploded rows: ${result.length}`, '');
+
+          setStatus(`Parsed ${normalized.length} employee row(s) from clipboard data.`, 'ok');
+          [downloadBtn, copyBtn, exportCsvBtn, exportJsonlBtn, foldAllBtn, unfoldAllBtn].forEach(b => b && (b.disabled = false));
+          setBusy(false);
+          toast('Clipboard parsed');
+        } catch (e) {
+          console.error(e);
+          setBusy(false);
+          toast('Clipboard parse failed', 'error');
+          setStatus('Could not parse clipboard as table/CSV.', 'error');
+        }
+      });
+
+      // ----- Keyboard Shortcuts -----
+      document.addEventListener('keydown', (e) => {
+        const mod = e.ctrlKey || e.metaKey;
+        if (!mod) return;
+        const key = e.key.toLowerCase();
+        if (key === 'o') { fileInput.click(); e.preventDefault(); }
+        if (key === 'c') { if (!copyBtn.disabled) copyBtn.click(); e.preventDefault(); }
+        if (key === 's') { if (!downloadBtn.disabled) downloadBtn.click(); e.preventDefault(); }
+        if (key === 'f') {
+          if (viewMode === 'editor') { editor.execCommand('find'); e.preventDefault(); }
+        }
+      });
+
+      // Initial view apply
+      renderEditorOrTree();
+
+      // ===== Helpers for parsing =====
       function getHeaderRow(sheet) {
-        const ref = sheet['!ref'];
-        if (!ref) return null;
+        const ref = sheet['!ref']; if (!ref) return null;
         const range = XLSX.utils.decode_range(ref);
         const headers = [];
         for (let C = range.s.c; C <= range.e.c; ++C) {
@@ -695,45 +1020,25 @@
         return map;
       }
       function resolveAlias(headerMap, aliases) {
-        for (const a of aliases) {
-          if (headerMap[a]) return headerMap[a];
-        }
+        for (const a of aliases) { if (headerMap[a]) return headerMap[a]; }
         return null;
       }
       function parseRoles(cell) {
         let s = String(cell ?? '').trim();
-        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-          s = s.slice(1, -1);
-        }
-        const parts = s
-          .split(ROLE_DELIMS_REGEX)
-          .map(x => x.trim())
-          .filter(Boolean);
-        const seen = new Set();
-        const out = [];
+        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1);
+        const parts = s.split(ROLE_DELIMS_REGEX).map(x => x.trim()).filter(Boolean);
+        const seen = new Set(); const out = [];
         for (let p of parts) {
           if (NORMALIZE_CASE) p = toTitleCaseWords(p);
           const key = p.toLowerCase();
-          if (!seen.has(key)) {
-            seen.add(key);
-            out.push(p);
-          }
+          if (!seen.has(key)) { seen.add(key); out.push(p); }
         }
         return out;
       }
       function toTitleCaseWords(s) {
-        return s
-          .split(/(\W+)/)
-          .map(tok => /^[A-Za-z]+$/.test(tok)
-            ? tok.charAt(0).toUpperCase() + tok.slice(1).toLowerCase()
-            : tok
-          )
-          .join('');
+        return s.split(/(\W+)/).map(tok => /^[A-Za-z]+$/.test(tok) ? tok.charAt(0).toUpperCase() + tok.slice(1).toLowerCase() : tok).join('');
       }
     }
-
-    // Auto-initialize all instances found on the page
-    document.querySelectorAll('.excel-json-widget').forEach(initExcelJsonWidget);
   </script>
 </body>
 </html>
