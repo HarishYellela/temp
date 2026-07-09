@@ -76,6 +76,120 @@ function ExecuteAction(action){
       -ms-user-select: none;
           user-select: none;
 }  
+
+
+
+
+JS
+
+
+$(document).ready(function(){
+$(".apr-portal-title > .apr-current-user-name > .clock > span ").append("class='usrname'");
+});
+
+
+CSS
+
+/* Here you can type your CSS styles which you can use in HTML Editor. Press F1 for help. */
+.apr-3ds-logo {
+	 Display: none !important;
+    -webkit-flex-shrink: 0;
+    -ms-flex-negative: 0;
+    flex-shrink: 0;
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+    -webkit-align-items: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    -webkit-justify-content: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    cursor: default;
+}
+
+.customInfologo
+{   
+    position:absolute !important;
+	float:left;
+    background: url("Images/BDX/BDLogo.png") no-repeat 0px 0px;
+    height:40px;
+    width:89px;
+    top:2px;
+    left:2px;
+	background-color: #fff !important;
+}
+.apr-app-name
+{
+	display:none !important;
+}
  
+ .apr-delmia-header .apr-delmia-header-left .apr-crumbs::before {
+    display:none;
+}
+ 
+.apr-crumbs {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  -webkit-flex: 30 1 auto;
+      -ms-flex: 30 1 auto;
+          flex: 30 1 auto;
+  margin-left: 50px !important;
+  text-overflow: clip;
+}
+ 
+.apr-crumbs > ul > *{
+	padding-bottom: 6px !important;
+	Font-size:20px !important;
+	/*padding-left:50px !important;*/
+}
+.apr-delmia-header .apr-delmia-header-left {
+    margin-left: 20px;
+    -webkit-box-flex: 1;
+    -webkit-flex: 1 1 auto;
+    -ms-flex: 1 1 auto;
+    flex: 1 1 auto;
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: center;
+    -webkit-align-items: center;
+    -ms-flex-align: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.apr-delmia-header .apr-delmia-header-right .apr-header-user-name, .apr-delmia-header .apr-delmia-header-right .clock {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    cursor: default;
+    margin-right: 9px;
+}
+.apr-crumbs {
+    font-size: 20px !important;
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    -webkit-box-flex: 2;
+    -webkit-flex: 2 1 auto;
+    -ms-flex: 2 1 auto;
+    flex: 2 1 auto;
+    margin-left: 10px;
+    text-overflow: clip;
+}
 
  
