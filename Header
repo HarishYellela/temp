@@ -31,3 +31,51 @@ function ExecuteAction(action){
 	
 
 </script>
+
+
+
+/* Here you can type your CSS styles which you can use in HTML Editor. Press F1 for help. */
+
+.apr-delmia-header-content::before {
+	
+	width: 40px !important;
+	height: 40px !important;
+	display: inline-block !important;
+	/*background-image:  url(Images/Logos/Logo.png) !important;*/
+	background-repeat: no-repeat !important;
+	background-size: 33px !important;
+    background-position:right !important;
+	content:  "" !important;
+}
+
+/*.apr-delmia-header-content > .apr-crumbs:first-child::before {
+
+	content: "|" !important;
+}
+*/
+.apr-delmia-header-right > a.apr-header-action.menu {
+	display:none;
+}
+
+
+.BDAHeaderAction{
+  font-size: 20px;
+  width: 44px;
+  height: 44px;
+  text-align: center;
+  line-height: 44px;
+  font-family: DSFontIcon;
+  cursor: pointer;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-content: center;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+      -ms-user-select: none;
+          user-select: none;
+}  
+ 
+
+ 
