@@ -1,0 +1,33 @@
+<div class="apr-delmia-header-left">
+	<div class="apr-crumbs">
+	<div class="apr-header-popup">
+	</div>
+			<span> &nbsp; {Title}</span>
+</div>
+	<span class="wux-ui-3ds wux-ui-3ds-1x wux-ui-3ds-refresh apr-la-space-me-left apr-la-space-me-right BDAHeaderAction" 
+		data-flx-key="#112"  onclick="ExecuteAction('CLOSELOOP' )" data-button="INITIALIZE" title="Refresh">
+	</span>	
+	<span data-flx-filter=" '{Screen}' != '{BaseScreen}' "  class="wux-ui-3ds wux-ui-3ds-1x wux-ui-3ds-back apr-la-space-me-left apr-la-space-me-right BDAHeaderAction" 
+		data-flx-key="#113"  onclick="ExecuteAction('BACK')" data-button="BACK" title="Back">
+	</span>	
+	<span class="wux-ui-3ds wux-ui-3ds-1x wux-ui-3ds-close apr-la-space-me-left apr-la-space-me-right BDAHeaderAction" 
+		data-flx-key="#27"  onclick="ExecuteAction('EXIT')" data-button="EXIT" title="Exit">
+	</span>	
+	<span data-flx-filter=" '{Screen}' == '{BaseScreen}' "  class="apr-header-action default-icon help" 
+		 onclick="ExecuteAction('HELP')" data-button="HELP"  title="Help">
+	</span>	
+</div>
+		
+
+
+
+
+<script>
+	
+function ExecuteAction(action){
+	$Context.outputs.Action = action;
+	$Context.submit();
+	}
+	
+
+</script>
